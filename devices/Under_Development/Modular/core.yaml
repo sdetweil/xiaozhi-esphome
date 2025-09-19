@@ -425,14 +425,15 @@ light:
 
 media_player:
   - platform: speaker
-    name: None
+    name: "Speaker Media Player"
     id: external_media_player
     # HW pack must provide "speaker: box_speaker"
     announcement_pipeline:
-      speaker: box_speaker
-      format: WAV
-      sample_rate: 16000
+      speaker: announcement_spk_resampling_input
       num_channels: 1
+    media_pipeline:
+        speaker: media_spk_resampling_input
+        num_channels: 2      
     buffer_size: 250000
     files:
       - id: timer_finished_sound

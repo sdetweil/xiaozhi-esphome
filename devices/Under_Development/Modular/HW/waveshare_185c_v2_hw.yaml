@@ -23,6 +23,7 @@ i2s_audio:
   - id: i2s_audio_bus
     i2s_lrclk_pin: GPIO38
     i2s_bclk_pin: GPIO48
+    sample_rate: 48000
 
 external_components:
   - source: github://pr#10392
@@ -41,13 +42,31 @@ microphone:
     sample_rate: 16000
     bits_per_sample: 16bit
 
+#speaker:
+#  - platform: i2s_audio
+#    id: box_speaker
+#    i2s_audio_id: i2s_audio_bus
+#    i2s_dout_pin: GPIO47
+#    dac_type: external
+#    channel: mono
 speaker:
   - platform: i2s_audio
     id: box_speaker
-    i2s_audio_id: i2s_audio_bus
-    i2s_dout_pin: GPIO47
     dac_type: external
-    channel: mono
+    i2s_dout_pin: GPIO47
+    sample_rate: 48000
+  - platform: mixer
+    id: mixer_speaker_id
+    output_speaker: speaker_id
+    source_speakers:
+      - id: announcement_spk_mixer_input
+      - id: media_spk_mixer_input
+  - platform: resampler
+    id: media_spk_resampling_input
+    output_speaker: media_spk_mixer_input
+  - platform: resampler
+    id: announcement_spk_resampling_input
+    output_speaker: announcement_spk_mixer_input    
 
 # --- BACKLIGHT ----------------------------------------------------------------
 output:
