@@ -50,14 +50,14 @@ microphone:
 #    dac_type: external
 #    channel: mono
 speaker:
-  - platform: i2s_audio
+  - platform: i2s_audio_bus
     id: box_speaker
     dac_type: external
     i2s_dout_pin: GPIO47
     #sample_rate: 48000
   - platform: mixer
     id: mixer_speaker_id
-    output_speaker: speaker_id
+    output_speaker: box_speaker
     source_speakers:
       - id: announcement_spk_mixer_input
       - id: media_spk_mixer_input
