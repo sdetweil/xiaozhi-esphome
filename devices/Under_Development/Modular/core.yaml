@@ -470,7 +470,7 @@ media_player:
       - if:
           condition:            
             - microphone.is_capturing:
-              voice_assistant.is_running:
+            - voice_assistant.is_running:
           then:
             - script.execute: stop_wake_word   
             - if:
