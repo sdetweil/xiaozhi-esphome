@@ -54,7 +54,7 @@ speaker:
     id: box_speaker
     dac_type: external
     i2s_dout_pin: GPIO47
-    sample_rate: 48000
+    #sample_rate: 48000
   - platform: mixer
     id: mixer_speaker_id
     output_speaker: speaker_id
