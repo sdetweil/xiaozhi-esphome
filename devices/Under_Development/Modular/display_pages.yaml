@@ -137,7 +137,7 @@
           it.fill(Color::BLACK);
           it.image((it.get_width() / 2), (it.get_height() / 2), id(casita_playing), ImageAlign::CENTER);
           // Optional: show timer progress while playing
-          id(draw_timer_timeline).execute();
+          #id(draw_timer_timeline).execute();
 
       - id: default_clock
         lambda: |-

@@ -443,6 +443,7 @@ media_player:
       - id: ready_sound
         file: ${startup_sound_file}
     on_announcement:
+      - logger.log: "in annoucement"        
       - if:
           condition:
             - microphone.is_capturing:
@@ -467,6 +468,7 @@ media_player:
             - component.update: main_display
 
     on_play:
+      - logger.log: "in play"   
       - if:
           condition:            
             - microphone.is_capturing:
