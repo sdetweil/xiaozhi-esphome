@@ -50,7 +50,7 @@ microphone:
 #    dac_type: external
 #    channel: mono
 speaker:
-  - platform: i2s_audio_bus
+  - platform: i2s_audio
     id: box_speaker
     dac_type: external
     i2s_dout_pin: GPIO47
