@@ -42,6 +42,11 @@ packages:
 ```
 Changes:
 ---
+### Modular v1.05
+- **Changes**  
+  - Added Rolex clockface (wallpaper) for analog clock
+  - Fixed Battery status not showing on analog clock and presence (if enabled)
+
 ### Modular v1.04
 - **Changes**  
   - Added Analog clock (yeah i know, why not)

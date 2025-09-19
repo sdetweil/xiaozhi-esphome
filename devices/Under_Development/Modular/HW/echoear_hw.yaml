@@ -1,9 +1,4 @@
-# EchoEar hardware pack v1.04
-
-external_components:
-  - source: github://pr#10392
-    components: [mipi_spi]
-    refresh: 1h
+# EchoEar hardware pack v1.05
 
 # --- BUSES / PERIPHERALS ------------------------------------------------------
 i2c:

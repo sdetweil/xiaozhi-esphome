@@ -105,6 +105,11 @@ ota:
 
 logger:
   hardware_uart: USB_SERIAL_JTAG
+  level: DEBUG
+  logs:
+    sensor: NONE
+    qmi8658: WARN
+    i2c.idf: WARN
 
 wifi:
   ssid: !secret wifi_ssid
@@ -118,6 +123,228 @@ wifi:
     - script.execute: draw_display
 
 captive_portal:
+
+sensor:
+  - platform: template
+    id: pitch_deg
+    name: "QMI8658 Pitch"
+    unit_of_measurement: "°"
+    accuracy_decimals: 1
+    state_class: measurement
+  - platform: template
+    id: roll_deg
+    name: "QMI8658 Roll"
+    unit_of_measurement: "°"
+    accuracy_decimals: 1
+    state_class: measurement
+  - platform: template
+    id: acc_x
+    name: "QMI8658 Accel X"
+    unit_of_measurement: "m/s²"
+    accuracy_decimals: 3
+    state_class: measurement
+  - platform: template
+    id: acc_y
+    name: "QMI8658 Accel Y"
+    unit_of_measurement: "m/s²"
+    accuracy_decimals: 3
+    state_class: measurement
+  - platform: template
+    id: acc_z
+    name: "QMI8658 Accel Z"
+    unit_of_measurement: "m/s²"
+    accuracy_decimals: 3
+    state_class: measurement
+
+  - platform: template
+    id: gyro_x
+    name: "QMI8658 Gyro X"
+    unit_of_measurement: "rad/s"
+    accuracy_decimals: 3
+    state_class: measurement
+  - platform: template
+    id: gyro_y
+    name: "QMI8658 Gyro Y"
+    unit_of_measurement: "rad/s"
+    accuracy_decimals: 3
+    state_class: measurement
+  - platform: template
+    id: gyro_z
+    name: "QMI8658 Gyro Z"
+    unit_of_measurement: "rad/s"
+    accuracy_decimals: 3
+    state_class: measurement
+
+  - platform: template
+    id: imu_temp
+    name: "QMI8658 Temperature"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+
+  - platform: template
+    id: bat_v
+    name: "Battery Voltage"
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    device_class: voltage
+    state_class: measurement
+  - platform: template
+    id: bat_pct
+    name: "Battery Level"
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    device_class: battery
+    state_class: measurement
+
+interval:
+  - interval: 100ms
+    then:
+      - lambda: |-
+          using esphome::i2c::ERROR_OK;
+
+          constexpr uint8_t QMI_ADDR = 0x6B;  // IMU
+          constexpr uint8_t AXP_ADDR = 0x34;  // PMIC
+
+          // --- I2C helpers (STOP-then-READ) ---
+          auto write_u8 = [&](uint8_t reg, uint8_t value) -> bool {
+            uint8_t buf[2] = {reg, value};
+            return id(bus_a)->write(QMI_ADDR, buf, 2) == ERROR_OK;
+          };
+          auto read_block = [&](uint8_t reg, uint8_t *data, uint8_t len) -> bool {
+            if (id(bus_a)->write(QMI_ADDR, &reg, 1) != ERROR_OK) return false;
+            delayMicroseconds(300);
+            return id(bus_a)->read(QMI_ADDR, data, len) == ERROR_OK;
+          };
+          auto read_block_retry = [&](uint8_t reg, uint8_t *data, uint8_t len) -> bool {
+            if (read_block(reg, data, len)) return true;
+            delay(2);
+            return read_block(reg, data, len);
+          };
+          auto axp_read = [&](uint8_t reg, uint8_t *data, uint8_t len) -> bool {
+            if (id(bus_a)->write(AXP_ADDR, &reg, 1) != ERROR_OK) return false;
+            delayMicroseconds(200);
+            return id(bus_a)->read(AXP_ADDR, data, len) == ERROR_OK;
+          };
+          auto axp_write_u8 = [&](uint8_t reg, uint8_t val) -> bool {
+            uint8_t buf[2] = {reg, val};
+            return id(bus_a)->write(AXP_ADDR, buf, 2) == ERROR_OK;
+          };
+
+          // --- IMU one-time init (with brief power-up wait) ---
+          static bool inited = false;
+          static uint32_t t0 = 0;
+          if (!inited) {
+            if (t0 == 0) t0 = millis();
+            if (millis() - t0 < 800) return;
+
+            // WHO_AM_I (expect 0x05)
+            uint8_t who = 0;
+            if (!read_block_retry(0x00, &who, 1) || who != 0x05) {
+              ESP_LOGW("qmi8658", "WHO_AM_I=0x%02X (expect 0x05)", who);
+              return;
+            }
+
+            // Init: auto-increment, ±8g / ±512 dps @125 Hz, LPFs on, enable a+g
+            write_u8(0x02, (1 << 6));                          // CTRL1
+            write_u8(0x03, (0b010 << 4) | (0b0100));           // CTRL2 accel
+            write_u8(0x04, (0b101 << 4) | (0b0100));           // CTRL3 gyro
+            write_u8(0x06, (1 << 4) | (0b10 << 1) | (1 << 0)); // CTRL5
+            write_u8(0x08, (1 << 1) | (1 << 0));               // CTRL7
+
+            // Ensure AXP2101 fuel-gauge is enabled (reg 0x18 bit3)
+            uint8_t r18 = 0;
+            if (axp_read(0x18, &r18, 1) && !(r18 & 0x08)) axp_write_u8(0x18, r18 | 0x08);
+
+            inited = true;
+          }
+
+          // --- read TEMP(0x33-0x34), ACC(0x35-0x3A), GYR(0x3B-0x40) ---
+          uint8_t raw[14] = {0};
+          if (!read_block_retry(0x33, raw, sizeof(raw))) return;
+
+          auto s16 = [](uint8_t lo, uint8_t hi) -> int16_t { return (int16_t)((hi << 8) | lo); };
+
+          int8_t  t_hi = (int8_t)raw[1];
+          float   t_c  = (float)t_hi + (raw[0] / 256.0f);
+
+          int16_t axr = s16(raw[2],  raw[3]);
+          int16_t ayr = s16(raw[4],  raw[5]);
+          int16_t azr = s16(raw[6],  raw[7]);
+          int16_t gxr = s16(raw[8],  raw[9]);
+          int16_t gyr = s16(raw[10], raw[11]);
+          int16_t gzr = s16(raw[12], raw[13]);
+
+          // Convert to SI units
+          const float g = 9.80665f;
+          const float accel_range_g = 8.0f;
+          const float gyro_range_dps = 512.0f;
+
+          float acc_cnt_per_g = 32768.0f / accel_range_g;
+          float ax = (axr / acc_cnt_per_g) * g;
+          float ay = (ayr / acc_cnt_per_g) * g;
+          float az = (azr / acc_cnt_per_g) * g;
+
+          float dps_per_count = gyro_range_dps / 32768.0f;
+          const float deg2rad = 3.14159265358979323846f / 180.0f;
+          float gx = gxr * dps_per_count * deg2rad;
+          float gy = gyr * dps_per_count * deg2rad;
+          float gz = gzr * dps_per_count * deg2rad;
+
+          // Pitch & Roll
+          float ax_g = ax / g, ay_g = ay / g, az_g = az / g;
+          float roll_val  = atan2f(ay_g, az_g) * 180.0f / 3.14159265358979323846f;
+          float pitch_val = atan2f(-ax_g, sqrtf(ay_g*ay_g + az_g*az_g)) * 180.0f / 3.14159265358979323846f;
+
+          // Publish IMU + angles
+          id(imu_temp).publish_state(t_c);
+          id(acc_x).publish_state(ax);
+          id(acc_y).publish_state(ay);
+          id(acc_z).publish_state(az);
+          id(gyro_x).publish_state(gx);
+          id(gyro_y).publish_state(gy);
+          id(gyro_z).publish_state(gz);
+          id(roll_deg).publish_state(roll_val);
+          id(pitch_deg).publish_state(pitch_val);
+
+          // --- AXP2101 battery & status (throttled to ~1 Hz) ---
+          static uint32_t last_axp = 0;
+          uint32_t now_ms = millis();
+          if (now_ms - last_axp >= 1000) {
+            last_axp = now_ms;
+
+            // VBAT (14-bit, 1 mV/LSB) at 0x34/0x35
+            uint8_t vbat_hi = 0, vbat_lo = 0;
+            if (axp_read(0x34, &vbat_hi, 1) && axp_read(0x35, &vbat_lo, 1)) {
+              uint16_t raw14 = ((vbat_hi & 0x3F) << 8) | vbat_lo;
+              id(bat_v).publish_state(raw14 / 1000.0f);
+            }
+
+            // Fuel-gauge percentage at 0xA4 (0–100%)
+            uint8_t pct = 0;
+            if (axp_read(0xA4, &pct, 1)) {
+              if (pct > 100) pct = 100;
+              id(bat_pct).publish_state((float)pct);
+            }
+
+            // VBUS good (reg 0x00 bit5)
+            uint8_t st1 = 0;
+            if (axp_read(0x00, &st1, 1)) {
+              bool vbus_good = (st1 & (1 << 5));
+              id(usb_power).publish_state(vbus_good);
+            }
+
+            // Charging status (reg 0x01 bits [2:0])
+            uint8_t st2 = 0;
+            if (axp_read(0x01, &st2, 1)) {
+              uint8_t cs = st2 & 0x07;
+              // 000 tri_charge, 001 pre_charge, 010 CC, 011 CV => charging
+              // 100 charge done, 101 not charging
+              bool chg = (cs <= 0b011);
+              id(charging).publish_state(chg);
+            }
+          }
 
 button:
   - platform: factory_reset
@@ -184,6 +411,16 @@ binary_sensor:
           - ON for at least 10s
         then:
           - button.press: factory_reset_btn
+
+  - platform: template
+    id: usb_power
+    name: "USB Power Present"
+    device_class: power
+
+  - platform: template
+    id: charging
+    name: "Battery Charging"
+    device_class: battery_charging
 
 i2c:
   - id: bus_a
@@ -844,6 +1081,14 @@ font:
     size: 30
     glyphsets:
       - ${font_glyphsets}
+  - file:
+      type: gfonts
+      family: ${font_family}
+      weight: 300
+    id: font_battery
+    size: 14
+    glyphsets:
+      - ${font_glyphsets}
 
 text_sensor:
   - id: text_request
@@ -912,7 +1157,7 @@ touchscreen:
 display:
   - platform: mipi_spi
     id: main_display
-    model: AXS15231
+    model: CO5300
     cs_pin: 12
     reset_pin: 8
     update_interval: never
@@ -924,17 +1169,6 @@ display:
     data_rate: 80MHz
     color_order: rgb
 
-    init_sequence:
-      - [0x11]              # Sleep Out
-      - [0xFE, 0x00]
-      - [0xC4, 0x80]        # SPI Mode Control
-      - [0x3A, 0x55]        # Pixel Format: 16bpp
-      - [0x53, 0x20]        # CTRL Display1
-      - [0x63, 0xFF]        # Brightness HBM
-      - [0x29]              # Display On
-      - [0x51, 0xD0]        # Brightness Normal
-      - [0x58, 0x00]        # WCE: Contrast Enhancement Off
-
     pages:
       - id: idle_page
         lambda: |-
@@ -942,6 +1176,100 @@ display:
           it.image((it.get_width() / 2), (it.get_height() / 2), id(casita_idle), ImageAlign::CENTER);
           id(draw_timer_timeline).execute();
           id(draw_active_timer_widget).execute();
+
+          // ---- Horizontal battery (top-right, double black outline, no backdrop) ----
+          {
+            const int W = it.get_width();
+            const int H = it.get_height();
+
+            // Safe-area insets (avoid rounded corners)
+            const int inset_top    = 28;
+            const int inset_right  = 40;
+            const int inset_left   = 0;
+            const int inset_bottom = 0;
+
+            // Layout
+            int  w   = 52;       // body width (no cap)
+            const int h   = 20;  // body height
+            const int capw = 5;  // cap width
+            int  caph = h - 8;   // cap height
+            const int pad  = 3;  // inner padding (gap between the two outlines)
+
+            // Clamp to safe area width
+            const int safe_w = W - inset_left - inset_right;
+            if (w + capw > safe_w) w = std::max(16, safe_w - capw);
+            if (caph < 6) caph = 6;
+
+            // Anchor to safe top-right
+            const int x = (W - inset_right) - (w + capw);
+            const int y = inset_top;
+
+            // Readings
+            float pct = isnan(id(bat_pct).state) ? 0.0f : id(bat_pct).state;
+            if (pct < 0) pct = 0; else if (pct > 100) pct = 100;
+            const bool chg = id(charging).state;
+
+            // Colors
+            const Color C_OUT = Color(0, 0, 0);       // BLACK outline
+            const Color C_OK  = Color(255, 255, 255); // normal fill (white)
+            const Color C_MID = Color(255, 215, 0);   // 20–50% (yellow)
+            const Color C_LOW = Color(255, 0, 0);     // <20% (red)
+            const Color C_CHG = Color(0, 255, 0);     // charging (green)
+            const Color C_TXT = Color(255, 255, 255); // text white
+            const Color C_SH  = Color(0, 0, 0);       // text shadow black
+
+            // Outer body outline (thicker = 2px by drawing two strokes)
+            it.rectangle(x, y, w, h, C_OUT);
+            it.rectangle(x+1, y+1, w-2, h-2, C_OUT);
+
+            // Cap on the RIGHT, double black outline too
+            const int capx = x + w;
+            const int capy = y + (h - caph) / 2;
+            it.rectangle(capx,   capy,   capw,   caph,   C_OUT);
+            it.rectangle(capx+1, capy+1, capw-2, caph-2, C_OUT);
+
+            // Inner cavity geometry (defines the inner black border position)
+            const int inx = x + pad;
+            const int iny = y + pad;
+            const int inw = w - 2 * pad;
+            const int inh = h - 2 * pad;
+
+            // Choose fill color
+            Color lvl = C_OK;
+            if (chg)           lvl = C_CHG;
+            else if (pct < 20) lvl = C_LOW;
+            else if (pct < 50) lvl = C_MID;
+
+            // Level fill (left → right) inside the inner border area
+            int fw = (int)(inw * (pct / 100.0f));
+            if (fw < 0) fw = 0; if (fw > inw) fw = inw;
+            if (fw > 0) it.filled_rectangle(inx, iny, fw, inh, lvl);
+
+            // Inner black border (second outline) drawn AFTER the fill so it stays visible
+            it.rectangle(inx,   iny,   inw,   inh,   C_OUT);
+
+            // Charging bolt overlay (centered)
+            if (chg) {
+              const int cx = x + w / 2;
+              const int top = iny + 1;
+              const int hh = inh - 2;
+              it.filled_rectangle(cx - 2, top,        3, hh / 2, C_OUT);
+              it.filled_rectangle(cx + 1, top + hh/3, 3, hh / 2, C_OUT);
+            }
+
+            // Percentage text (centered, white with black shadow)
+            char txt[8];
+            snprintf(txt, sizeof(txt), "%d%%", (int)(pct + 0.5f));
+            const int tx = x + w / 2;
+            const int ty = y + h / 2;
+            it.printf(tx+1, ty+1, id(font_battery), C_SH, TextAlign::CENTER, "%s", txt);
+            it.printf(tx,   ty,   id(font_battery), C_TXT, TextAlign::CENTER, "%s", txt);
+
+            // // DEBUG safe area (uncomment to visualize)
+            // it.rectangle(inset_left, inset_top, safe_w, H - inset_top - inset_bottom, Color(255,0,255));
+          }
+
+
       - id: listening_page
         lambda: |-
           it.fill(id(listening_color));

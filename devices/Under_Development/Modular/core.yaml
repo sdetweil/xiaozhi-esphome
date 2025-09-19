@@ -1124,7 +1124,7 @@ script:
   - id: swipe_up_action     # next wallpaper (cycle)
     then:
       - lambda: |-
-          static const char* const opts[] = { "clock","hacker","ha-girl","mission","starrysky" };
+          static const char* const opts[] = { "clock","hacker","ha-girl","mission","Rolex","starrysky" };
           const int N = sizeof(opts)/sizeof(opts[0]);
           std::string cur = id(clock_wallpaper_image).state.c_str();
           int idx = 0;
@@ -1372,6 +1372,7 @@ select:
       - hacker
       - ha-girl
       - mission
+      - Rolex
       - starrysky
     initial_option: ${clock_background_image}
     on_value:

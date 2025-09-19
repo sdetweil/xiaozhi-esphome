@@ -993,7 +993,6 @@
           const Color LED_RED(255, 0, 0);
           const Color LED_RED_BORDER(180, 0, 0);
 
-          // Fit room label nicely
           auto fit_label = [&](const char* label, int w) -> std::string {
             int max_chars = std::max(3, (w - 10) / 7);
             std::string s(label ? label : "");
@@ -1002,17 +1001,15 @@
             return s.substr(0, max_chars - 1) + "…";
           };
 
-          // Draw presence LED: only if presence==true; corner depends on "left vs right" box
           auto draw_presence_led = [&](int x, int y, int w, bool right_side) {
             const int inset  = std::max(4, CELL / 12);
-            const int radius = std::max(3, CELL / 12);   // smaller LED
+            const int radius = std::max(3, CELL / 12);
             int cx = right_side ? (x + w - inset - radius) : (x + inset + radius);
             int cy = y + inset + radius;
             it.filled_circle(cx, cy, radius, LED_RED);
             it.circle(cx, cy, radius, LED_RED_BORDER);
           };
 
-          // Draw one room: fill by LIGHT state; add red LED if presence true
           auto draw_room = [&](int x, int y, int w, int h,
                                const char* label,
                                esphome::binary_sensor::BinarySensor *presence,
@@ -1031,39 +1028,74 @@
             }
 
             bool motion = (presence && presence->has_state() && presence->state);
-            if (motion) {
-              draw_presence_led(x, y, w, right_side);
-            }
+            if (motion) { draw_presence_led(x, y, w, right_side); }
           };
 
-          // Boxes: LEFT column -> LED on left; RIGHT column -> LED on right; CENTER -> left
-          draw_room(xL, yT, CELL, CELL, "${sensor1_label}", id(ha_sensor1), id(ha_light1), C1_ON, false); // left col
-          draw_room(xR, yT, CELL, CELL, "${sensor2_label}", id(ha_sensor2), id(ha_light2), C2_ON, true);  // right col
-          draw_room(xL, yB, CELL, CELL, "${sensor3_label}", id(ha_sensor3), id(ha_light3), C3_ON, false); // left col
-          draw_room(xR, yB, CELL, CELL, "${sensor4_label}", id(ha_sensor4), id(ha_light4), C4_ON, true);  // right col
-          draw_room(cX, cY, CW,   CH,   "${sensor5_label}", id(ha_sensor5), id(ha_light5), C5_ON, false); // center -> left
+          // Grid
+          draw_room(xL, yT, CELL, CELL, "${sensor1_label}", id(ha_sensor1), id(ha_light1), C1_ON, false);
+          draw_room(xR, yT, CELL, CELL, "${sensor2_label}", id(ha_sensor2), id(ha_light2), C2_ON, true);
+          draw_room(xL, yB, CELL, CELL, "${sensor3_label}", id(ha_sensor3), id(ha_light3), C3_ON, false);
+          draw_room(xR, yB, CELL, CELL, "${sensor4_label}", id(ha_sensor4), id(ha_light4), C4_ON, true);
+          draw_room(cX, cY, CW,   CH,   "${sensor5_label}", id(ha_sensor5), id(ha_light5), C5_ON, false);
 
-          // Time under grid (unchanged)
+          // Time
           if (SHOW_TIME) {
             auto now = id(homeassistant_time).now();
             const int CX = (L + R) / 2;
             const int time_y = ORGY + GRID_H + gap_clk;
 
             if (id(clock_24h).state) {
-              if (SHOW_SECS)
-                it.strftime(CX, time_y, time_font, FG, TextAlign::TOP_CENTER, "%H:%M:%S", now);
-              else
-                it.strftime(CX, time_y, time_font, FG, TextAlign::TOP_CENTER, "%H:%M", now);
+              if (SHOW_SECS) it.strftime(CX, time_y, time_font, FG, TextAlign::TOP_CENTER, "%H:%M:%S", now);
+              else           it.strftime(CX, time_y, time_font, FG, TextAlign::TOP_CENTER, "%H:%M",    now);
             } else {
-              if (SHOW_SECS)
-                it.strftime(CX, time_y, time_font, FG, TextAlign::TOP_CENTER, "%I:%M:%S%p", now);
-              else
-                it.strftime(CX, time_y, time_font, FG, TextAlign::TOP_CENTER, "%I:%M%p", now);
+              if (SHOW_SECS) it.strftime(CX, time_y, time_font, FG, TextAlign::TOP_CENTER, "%I:%M:%S%p", now);
+              else           it.strftime(CX, time_y, time_font, FG, TextAlign::TOP_CENTER, "%I:%M%p",    now);
             }
           }
 
-          // (Battery chip stays handled elsewhere as you already had)
+          // Battery chip
+          if (id(show_battery_status).state) {
+            const int top = 2;
+            const int w   = 56;
+            const int h   = 24;
+            const int capw = 5;
+            const int caph = h - 8;
+            const int pad  = 3;
 
+            const int cx = it.get_width() / 2;
+            const int x  = cx - (w + capw) / 2;
+            const int y  = top;
+
+            float pct = id(battery_percentage).state;
+            if (pct < 0) pct = 0; else if (pct > 100) pct = 100;
+
+            Color lvl = Color(0x00, 0xA8, 0x00);
+            if (pct <= 20)       lvl = Color(0xD0, 0x00, 0x00);
+            else if (pct <= 50)  lvl = Color(0xD0, 0x9A, 0x00);
+
+            it.filled_rectangle(x, y, w, h, Color::BLACK);
+            it.rectangle(x, y, w, h, Color::WHITE);
+
+            const int capx = x + w;
+            const int capy = y + (h - caph) / 2;
+            it.filled_rectangle(capx, capy, capw, caph, Color::BLACK);
+            it.rectangle(capx, capy, capw, caph, Color::WHITE);
+
+            const int inx = x + pad;
+            const int iny = y + pad;
+            const int inw = w - 2*pad;
+            const int inh = h - 2*pad;
+            it.filled_rectangle(inx, iny, inw, inh, Color::BLACK);
+
+            int fw = (int)(inw * (pct / 100.0f));
+            if (fw > 0) it.filled_rectangle(inx, iny, fw, inh, lvl);
+            it.rectangle(inx, iny, inw, inh, Color::WHITE);
+
+            char txt[8];
+            snprintf(txt, sizeof(txt), "%.0f%%", pct);
+            it.printf(x + w/2 + 1, y + h/2 + 1, id(font_battery), Color::BLACK, TextAlign::CENTER, "%s", txt);
+            it.printf(x + w/2,     y + h/2,     id(font_battery), Color::WHITE, TextAlign::CENTER, "%s", txt);
+          }
 
       - id: weather_clock
         lambda: |-
@@ -1363,7 +1395,7 @@
           float rr = id(clock_color_picker).current_values.get_red();
           float gg = id(clock_color_picker).current_values.get_green();
           float bb = id(clock_color_picker).current_values.get_blue();
-          if (rr == 0.0f && gg == 0.0f && bb == 0.0f) { rr = gg = bb = 1.0f; }  // default white
+          if (rr == 0.0f && gg == 0.0f && bb == 0.0f) { rr = gg = bb = 1.0f; }
           const Color FG((uint8_t)(rr * 255.0f), (uint8_t)(gg * 255.0f), (uint8_t)(bb * 255.0f));
           const Color FACE_ACC(60,60,60);
           const Color RING(180,180,180);
@@ -1371,28 +1403,26 @@
 
           auto &date_font = id(font_big_date);
 
-          // ----- geometry (auto scale) -----
-          const int M       = std::max(8, std::min(W, H) / 18);       // safe margin
-          const int R       = std::min(W, H) / 2 - M;                  // radius
-          const int R_TICKS = R - std::max(4, R / 18);                 // tick ring radius
+          // ----- geometry -----
+          const int M       = std::max(8, std::min(W, H) / 18);
+          const int R       = std::min(W, H) / 2 - M;
+          const int R_TICKS = R - std::max(4, R / 18);
 
-          // Size awareness for tiny displays
           const int  MINWH     = std::min(W, H);
-          const bool TINY      = (MINWH <= 160);                       // e.g. 128x64 OLED
+          const bool TINY      = (MINWH <= 160);
           auto &num_font       = TINY ? id(font_battery) : id(font_big_date);
-          const bool DRAW_NUMS = id(clock_show_time).state && !TINY;   // hide numerals on tiny screens
+          const bool DRAW_NUMS = id(clock_show_time).state && !TINY;
 
-          const int R_NUMBERS  = R - std::max(16, R / 6);              // numeral ring
-          const int NUM_PAD    = TINY ? std::max(2, R / 28)
-                                      : std::max(4, R / 22);           // gap between ticks and numerals
+          const int R_NUMBERS  = R - std::max(16, R / 6);
+          const int NUM_PAD    = TINY ? std::max(2, R / 28) : std::max(4, R / 22);
 
-          // ----- fast unit circle LUT -----
+          // ----- LUT -----
           static bool LUT_INIT = false;
           static int16_t ux[60], uy[60];
           if (!LUT_INIT) {
             const float TWO_PI = 6.2831853f;
             for (int i = 0; i < 60; i++) {
-              float a = (i / 60.0f) * TWO_PI - (3.1415926f / 2.0f);   // 0 at 12 o'clock
+              float a = (i / 60.0f) * TWO_PI - (3.1415926f / 2.0f);
               ux[i] = (int16_t) lroundf(cosf(a) * 10000.0f);
               uy[i] = (int16_t) lroundf(sinf(a) * 10000.0f);
             }
@@ -1425,7 +1455,7 @@
             oy = CY + (int) lroundf(r * sinf(a));
           };
 
-          // ----- hand lengths & widths (size-aware) -----
+          // ----- hand sizes -----
           const int L_H = (int)(R * 0.52f);
           const int L_M = (int)(R * 0.72f);
           const int L_S = (int)(R * 0.82f);
@@ -1447,16 +1477,14 @@
             }
           };
 
-          // ----- dial graphics (toggle with Clock Show Time) -----
+          // ----- dial (if time shown) -----
           if (id(clock_show_time).state) {
-            // Rings
             it.circle(CX, CY, R,   RING);
             it.circle(CX, CY, R-2, FACE_ACC);
 
-            // Ticks (thicker at 12/3/6/9), clamped away from numeral ring
             for (int i = 0; i < 60; i++) {
               bool major    = (i % 5  == 0);
-              bool quadrant = (i % 15 == 0);                 // numeral positions
+              bool quadrant = (i % 15 == 0);
               int  len_base = quadrant ? std::max(10, R / 6)
                                        : (major ? std::max(8, R / 10)
                                                 : std::max(4, R / 18));
@@ -1465,7 +1493,7 @@
               int r_outer = R_TICKS;
               int r_inner = R_TICKS - len_base;
               if (quadrant && DRAW_NUMS) {
-                r_inner = std::max(r_inner, R_NUMBERS + NUM_PAD);     // never cross numerals
+                r_inner = std::max(r_inner, R_NUMBERS + NUM_PAD);
               }
 
               int x1 = rx(r_outer, i), y1 = ry(r_outer, i);
@@ -1473,13 +1501,12 @@
 
               if (quadrant) {
                 it.line(x1, y1, x2, y2, col);
-                it.line(x1+1, y1, x2+1, y2, col);                     // pseudo thickness
+                it.line(x1+1, y1, x2+1, y2, col);
               } else {
                 it.line(x1, y1, x2, y2, col);
               }
             }
 
-            // Numerals (hide on tiny screens)
             if (DRAW_NUMS) {
               auto print_center = [&](int i, const char* txt) {
                 int tx = rx(R_NUMBERS, i);
@@ -1493,29 +1520,66 @@
             }
           }
 
-          // ----- hands (always visible) -----
-          { int hx, hy; polar(h_pos, L_H, hx, hy);
-            thick_hand(CX, CY, hx, hy, W_H, FG);
-          }
-          { int mx, my; polar(m_pos, L_M, mx, my);
-            thick_hand(CX, CY, mx, my, W_M, FG);
-          }
+          // ----- hands -----
+          { int hx, hy; polar(h_pos, L_H, hx, hy); thick_hand(CX, CY, hx, hy, W_H, FG); }
+          { int mx, my; polar(m_pos, L_M, mx, my); thick_hand(CX, CY, mx, my, W_M, FG); }
           if (id(clock_show_seconds).state) {
             int sx, sy; polar(s_pos, L_S, sx, sy);
             it.line(CX, CY, sx, sy, SEC_COL);
-            // counterweight
             int bwx, bwy; polar(fmodf(s_pos + 0.5f, 1.0f), (int)(R * 0.18f), bwx, bwy);
             it.line(CX, CY, bwx, bwy, SEC_COL);
           }
-
-          // Center cap
           it.filled_circle(CX, CY, std::max(3, R / 20), FG);
 
-          // ----- optional date (unchanged position) -----
+          // ----- date -----
           if (id(clock_show_date).state) {
             const int date_y = CY + (int)(R * 0.55f);
             if (id(clock_24h).state)
               it.strftime(CX, date_y, date_font, FG, TextAlign::TOP_CENTER, "%a, %d %b", now);
             else
               it.strftime(CX, date_y, date_font, FG, TextAlign::TOP_CENTER, "%a, %b %d", now);
+          }
+
+          // Battery chip
+          if (id(show_battery_status).state) {
+            const int top = 2;
+            const int w   = 56;
+            const int h   = 24;
+            const int capw = 5;
+            const int caph = h - 8;
+            const int pad  = 3;
+
+            const int cx = it.get_width() / 2;
+            const int x  = cx - (w + capw) / 2;
+            const int y  = top;
+
+            float pct = id(battery_percentage).state;
+            if (pct < 0) pct = 0; else if (pct > 100) pct = 100;
+
+            Color lvl = Color(0x00, 0xA8, 0x00);
+            if (pct <= 20)       lvl = Color(0xD0, 0x00, 0x00);
+            else if (pct <= 50)  lvl = Color(0xD0, 0x9A, 0x00);
+
+            it.filled_rectangle(x, y, w, h, Color::BLACK);
+            it.rectangle(x, y, w, h, Color::WHITE);
+
+            const int capx = x + w;
+            const int capy = y + (h - caph) / 2;
+            it.filled_rectangle(capx, capy, capw, caph, Color::BLACK);
+            it.rectangle(capx, capy, capw, caph, Color::WHITE);
+
+            const int inx = x + pad;
+            const int iny = y + pad;
+            const int inw = w - 2*pad;
+            const int inh = h - 2*pad;
+            it.filled_rectangle(inx, iny, inw, inh, Color::BLACK);
+
+            int fw = (int)(inw * (pct / 100.0f));
+            if (fw > 0) it.filled_rectangle(inx, iny, fw, inh, lvl);
+            it.rectangle(x, y, w, h, Color::WHITE);
+
+            char txt[8];
+            snprintf(txt, sizeof(txt), "%.0f%%", pct);
+            it.printf(x + w/2 + 1, y + h/2 + 1, id(font_battery), Color::BLACK, TextAlign::CENTER, "%s", txt);
+            it.printf(x + w/2,     y + h/2,     id(font_battery), Color::WHITE, TextAlign::CENTER, "%s", txt);
           }
