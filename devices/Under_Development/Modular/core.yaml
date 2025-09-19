@@ -34,7 +34,7 @@ substitutions:
 esphome:
   name: ${name}
   friendly_name: ${friendly_name}
-  min_version: 2025.5.0
+  min_version: 2025.9.0
   name_add_mac_suffix: false
   on_boot:
     priority: 600
@@ -476,14 +476,14 @@ media_player:
       - display.page.show: now_playing_page
       - component.update: main_display
 
-    on_stop:  
-      - if:
-        condition:
-          not:
-            voice_assistant.is_running:
-        then:
-          - script.execute: set_idle_or_mute_phase
-          - script.execute: draw_display
+#    on_stop:  
+#      - if:
+#        condition:
+#          not:
+#            voice_assistant.is_running:
+#        then:
+#          - script.execute: set_idle_or_mute_phase
+#          - script.execute: draw_display
               
     on_idle:
       - if:
