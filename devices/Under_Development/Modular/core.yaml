@@ -465,6 +465,26 @@ media_player:
             - script.execute: reset_screensaver
             - display.page.show: now_playing_page
             - component.update: main_display
+
+    on_play:
+      - if:
+          condition:
+            - microphone.is_capturing:
+          then:
+            - script.execute: stop_wake_word    
+      - script.execute: reset_screensaver
+      - display.page.show: now_playing_page
+      - component.update: main_display
+
+    on_stop:  
+      - if:
+        condition:
+          not:
+            voice_assistant.is_running:
+        then:
+          - script.execute: set_idle_or_mute_phase
+          - script.execute: draw_display
+              
     on_idle:
       - if:
           condition:
