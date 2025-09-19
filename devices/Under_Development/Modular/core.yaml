@@ -555,7 +555,7 @@ voice_assistant:
               - not:
                   media_player.is_announcing:
               - not:
-                  speaker.is_playing:
+                  announcement_spk_mixer_input.is_playing:
     - if:
         condition:
           - lambda: return id(wake_word_engine_location).state == "On device";
