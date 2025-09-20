@@ -920,7 +920,7 @@
           // MUST be temp_fullscreen here:
           it.image(W / 2, H / 2, id(temp_fullscreen), ImageAlign::CENTER);
 
-      - id: presense_sensor_clock
+      - id: presence_sensor_clock
         lambda: |-
           const int W = it.get_width();
           const int H = it.get_height();

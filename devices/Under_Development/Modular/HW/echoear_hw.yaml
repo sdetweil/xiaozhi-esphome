@@ -76,8 +76,18 @@ touchscreen:
             const int w = id(main_display).get_width();
             const int h = id(main_display).get_height();
             const int min_dim = (w < h) ? w : h;
-            const int MIN_DIST = std::max(20, min_dim / 6);
-            const uint32_t MAX_TIME = 1200; // ms
+
+            // Swipe thresholds
+            const int MIN_DIST = std::max(16, min_dim / 8);
+            const uint32_t MAX_TIME = 1500;
+
+            // Tap guard (strict)
+            const int TAP_MAX_DIST  = std::max(8,  min_dim / 20);
+            const uint32_t TAP_MAX_TIME = 300;
+
+            // Tap fallback (more forgiving)
+            const int TAP_FB_DIST  = std::max(14, min_dim / 12);
+            const uint32_t TAP_FB_TIME = 700;
 
             // Normalize for display rotation
             const int ROT = ${rotate_display};
@@ -90,36 +100,36 @@ touchscreen:
               default: break;
             }
 
+            const int absx = std::abs(ndx);
+            const int absy = std::abs(ndy);
+
             bool is_left=false, is_right=false, is_up=false, is_down=false;
 
-            if (dt <= MAX_TIME) {
-              if (std::abs(ndx) > std::abs(ndy) && std::abs(ndx) >= MIN_DIST) {
+            // Swipe?
+            if (dt <= MAX_TIME && (absx >= MIN_DIST || absy >= MIN_DIST)) {
+              if (absx >= absy) {
                 if (ndx < 0) is_left = true; else is_right = true;
-              } else if (std::abs(ndy) >= MIN_DIST) {
+              } else {
                 if (ndy < 0) is_up = true; else is_down = true;
               }
             }
 
-            // If nothing: treat as tap
+            // Not a swipe → tap (strict, then forgiving fallback)
             if (!(is_left || is_right || is_up || is_down)) {
-              id(touch_input).publish_state(true);
-              delay(250);
-              id(touch_input).publish_state(false);
+              if ((absx <= TAP_MAX_DIST && absy <= TAP_MAX_DIST && dt <= TAP_MAX_TIME) ||
+                  (absx <= TAP_FB_DIST  && absy <= TAP_FB_DIST  && dt <= TAP_FB_TIME)) {
+                id(pulse_touch_input).execute();
+              }
               return;
             }
 
-            // Always expose to HA
-            if (is_left)  id(swipe_left).publish_state(true);
-            if (is_right) id(swipe_right).publish_state(true);
-            if (is_up)    id(swipe_up).publish_state(true);
-            if (is_down)  id(swipe_down).publish_state(true);
-            delay(200);
-            id(swipe_left).publish_state(false);
-            id(swipe_right).publish_state(false);
-            id(swipe_up).publish_state(false);
-            id(swipe_down).publish_state(false);
+            // Always expose to HA via non-blocking pulses
+            if (is_left)  id(pulse_swipe_left).execute();
+            if (is_right) id(pulse_swipe_right).execute();
+            if (is_up)    id(pulse_swipe_up).execute();
+            if (is_down)  id(pulse_swipe_down).execute();
 
-            // Optional local handling (by switch)
+            // Optional local handling
             if (id(swipe_local).state) {
               if (is_left)  id(swipe_left_action).execute();
               if (is_right) id(swipe_right_action).execute();

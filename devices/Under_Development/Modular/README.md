@@ -42,6 +42,11 @@ packages:
 ```
 Changes:
 ---
+### Modular v1.06
+- **Changes**  
+ - Fixed swipes didn't work when "handle swipes locally" switch was off, optimized timing
+ - changed minor non-breaking spelling mistake
+
 ### Modular v1.05
 - **Changes**  
   - Added Rolex clockface (wallpaper) for analog clock

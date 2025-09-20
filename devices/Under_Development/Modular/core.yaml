@@ -1,4 +1,4 @@
-# Core v1.05
+# Core v1.06
 
 substitutions:
   allowed_characters: >-
@@ -118,7 +118,7 @@ api:
                   id: temp_fullscreen
                   url: !lambda 'return url;'
                   update: true
-              - delay: 1200ms
+              - delay: 600ms
               - display.page.show: empty_clock
               - component.update: main_display
               - script.execute: reset_screensaver
@@ -329,26 +329,26 @@ binary_sensor:
     id: swipe_left
     name: "Swipe Left"
     device_class: moving
-    on_press: []
+    entity_category: diagnostic
 
   - platform: template
     id: swipe_right
     name: "Swipe Right"
     device_class: moving
-    on_press: []
-
+    entity_category: diagnostic
+    
   - platform: template
     id: swipe_up
     name: "Swipe Up"
     device_class: moving
-    on_press: []
-
+    entity_category: diagnostic
+    
   - platform: template
     id: swipe_down
     name: "Swipe Down"
     device_class: moving
-    on_press: []
-
+    entity_category: diagnostic
+    
   - platform: homeassistant
     id: ha_sensor1
     entity_id: ${sensor1_entity}
@@ -1076,7 +1076,7 @@ script:
           } else if (sel == "Flip") {
             id(main_display).show_page(flip_clock);
           } else if (sel == "Presence") {
-            id(main_display).show_page(presense_sensor_clock);
+            id(main_display).show_page(presence_sensor_clock);
           } else if (sel == "Weather") {
             id(main_display).show_page(weather_clock);
           } else if (sel == "Small") {
@@ -1132,6 +1132,40 @@ script:
     then:
       - switch.toggle: show_battery_status
       - script.execute: draw_display
+
+  - id: pulse_swipe_left
+    mode: restart
+    then:
+      - binary_sensor.template.publish: { id: swipe_left,  state: ON }
+      - delay: 150ms
+      - binary_sensor.template.publish: { id: swipe_left,  state: OFF }
+
+  - id: pulse_swipe_right
+    mode: restart
+    then:
+      - binary_sensor.template.publish: { id: swipe_right, state: ON }
+      - delay: 150ms
+      - binary_sensor.template.publish: { id: swipe_right, state: OFF }
+
+  - id: pulse_swipe_up
+    mode: restart
+    then:
+      - binary_sensor.template.publish: { id: swipe_up,    state: ON }
+      - delay: 150ms
+      - binary_sensor.template.publish: { id: swipe_up,    state: OFF }
+
+  - id: pulse_swipe_down
+    mode: restart
+    then:
+      - binary_sensor.template.publish: { id: swipe_down,  state: ON }
+      - delay: 150ms
+      - binary_sensor.template.publish: { id: swipe_down,  state: OFF }
+
+  - id: pulse_touch_input
+    then:
+      - binary_sensor.template.publish: { id: touch_input, state: ON }
+      - delay: 150ms
+      - binary_sensor.template.publish: { id: touch_input, state: OFF }
 
 switch:
   - platform: template
