@@ -661,7 +661,7 @@ interval:
           const bool not_muted    = !id(mute).state;
           const bool clock_ok     = id(clock_enabled).state;
           const bool not_fullscreen   = !id(showing_fullscreen_image);
-          const bool not_playing = !id(media_player.is_playing)
+          const bool not_playing = !(id(media_player).state == 1);
  
           id(check_if_timers_active).execute();
           const bool has_active_timer = id(global_is_timer_active);
