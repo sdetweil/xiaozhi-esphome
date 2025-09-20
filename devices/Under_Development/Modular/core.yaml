@@ -483,7 +483,9 @@ media_player:
                       condition:
                         - not:
                             voice_assistant.is_running: 
+      - logger.log: "in play - turn off screensaver"                             
       - script.execute: reset_screensaver
+      - lambda: id(showing_fullscreen_image) = true;
       - display.page.show: now_playing_page
       - component.update: main_display
 
@@ -512,6 +514,7 @@ media_player:
             not:
               voice_assistant.is_running:
           then:
+            - lambda: id(showing_fullscreen_image) = false;          
             - script.execute: start_wake_word
             - script.execute: set_idle_or_mute_phase
             - script.execute: draw_display
