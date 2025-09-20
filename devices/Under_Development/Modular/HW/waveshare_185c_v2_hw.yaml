@@ -37,21 +37,13 @@ microphone:
     sample_rate: 16000
     bits_per_sample: 16bit
 
-#speaker:
-#  - platform: i2s_audio
-#    id: box_speaker
-#    i2s_audio_id: i2s_audio_bus
-#    i2s_dout_pin: GPIO47
-#    dac_type: external
-#    channel: mono
 speaker:
   - platform: i2s_audio
     id: box_speaker
     i2s_audio_id: i2s_audio_bus
     dac_type: external
     i2s_dout_pin: GPIO47
-    #sample_rate: 48000
-    buffer_duration: 3s
+    buffer_duration: 1.25s
   - platform: mixer
     id: mixer_speaker_id
     output_speaker: box_speaker

@@ -442,8 +442,7 @@ media_player:
         file: https://github.com/sdetweil/xiaozhi-esphome/raw/w_player/sounds/wake_word_triggered.flac
       - id: ready_sound
         file: ${startup_sound_file}
-    on_announcement:
-      - logger.log: "in annoucement"        
+    on_announcement:     
       - if:
           condition:
             - microphone.is_capturing:
@@ -468,7 +467,6 @@ media_player:
             - component.update: main_display
 
     on_play:
-      - logger.log: "in play"   
       - if:
           condition:            
             - microphone.is_capturing:
@@ -482,28 +480,27 @@ media_player:
                   - wait_until:
                       condition:
                         - not:
-                            voice_assistant.is_running: 
-      - logger.log: "in play - set fullscreen"                             
+                            voice_assistant.is_running:                             
       - script.execute: reset_screensaver
-      #- lambda: id(showing_fullscreen_image) = true;
       - display.page.show: now_playing_page
       - component.update: main_display
     
-    on_pause:
-      - logger.log: "in media_player pause - turn off screensaver"
-      #- lambda: id(showing_fullscreen_image) = false;          
-      - script.execute: start_wake_word
-      - script.execute: set_idle_or_mute_phase
-      - script.execute: draw_display      
-              
-    on_idle:
-      - logger.log: "in media_player idle - turn off fullscreen"
+    on_pause:      
       - if:
           condition:
             not:
               voice_assistant.is_running:
-          then:
-            #- lambda: id(showing_fullscreen_image) = false;          
+          then:      
+            - script.execute: start_wake_word
+            - script.execute: set_idle_or_mute_phase
+            - script.execute: draw_display      
+              
+    on_idle:
+      - if:
+          condition:
+            not:
+              voice_assistant.is_running:
+          then:        
             - script.execute: start_wake_word
             - script.execute: set_idle_or_mute_phase
             - script.execute: draw_display
