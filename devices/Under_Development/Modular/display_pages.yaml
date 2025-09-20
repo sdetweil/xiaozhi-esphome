@@ -1477,8 +1477,8 @@
             }
           };
 
-          // ----- dial (if time shown) -----
-          if (id(clock_show_time).state) {
+          // ----- dial (if dots shown) -----
+          if (id(clock_show_dots).state) {
             it.circle(CX, CY, R,   RING);
             it.circle(CX, CY, R-2, FACE_ACC);
 
