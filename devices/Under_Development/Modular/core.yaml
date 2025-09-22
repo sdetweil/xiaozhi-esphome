@@ -576,12 +576,14 @@ interval:
           const bool not_muted    = !id(mute).state;
           const bool clock_ok     = id(clock_enabled).state;
           const bool not_fullscreen   = !id(showing_fullscreen_image);
-          const bool not_playing = !(id(external_media_player).state == MEDIA_PLAYER_STATE_PLAYING);
+          //const bool not_playing = !(id(external_media_player).state == MEDIA_PLAYER_STATE_PLAYING);
  
           id(check_if_timers_active).execute();
           const bool has_active_timer = id(global_is_timer_active);
 
-          if (idle_phase && not_muted && clock_ok && not_fullscreen && !has_active_timer && not_playing) {
+          if (idle_phase && not_muted && clock_ok && not_fullscreen && !has_active_timer 
+          //&& not_playing
+          ) {
             id(idle_seconds)++;
             int delay_s = (int) id(clock_delay_seconds).state;
             if (delay_s <= 0) delay_s = 30;

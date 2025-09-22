@@ -47,17 +47,18 @@ speaker:
   - platform: mixer
     id: mixer_speaker_id
     output_speaker: box_speaker
+    num_channels:2
     source_speakers:
       - id: announcement_spk_mixer_input
       - id: media_spk_mixer_input
   - platform: resampler
     id: media_spk_resampling_input
     output_speaker: media_spk_mixer_input
-    sample_rate: 48000
+    sample_rate: 41000
   - platform: resampler
     id: announcement_spk_resampling_input
     output_speaker: announcement_spk_mixer_input    
-    sample_rate: 48000
+    sample_rate: 41000
 
 media_player:
   - platform: speaker
