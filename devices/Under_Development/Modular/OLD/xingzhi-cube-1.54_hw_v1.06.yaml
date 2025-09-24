@@ -66,47 +66,27 @@ speaker:
     i2s_audio_id: i2s_audio_bus
     i2s_dout_pin: GPIO7
     dac_type: external
-    channel: mono
-    timeout: never
-    buffer_duration: 300ms
-
-  - platform: mixer
-    id: mixing_speaker
-    output_speaker: box_speaker
-    num_channels: 2
-    source_speakers:
-      - id: announcement_mixer_input
-        timeout: never
-      - id: media_mixer_input
-        timeout: never
-
-  - platform: resampler
-    id: media_resampling_input
-    output_speaker: media_mixer_input
-    sample_rate: 48000
-    bits_per_sample: 16
-  - platform: resampler
-    id: announcement_resampling_input
-    output_speaker: announcement_mixer_input    
-    sample_rate: 48000
-    bits_per_sample: 16
+    sample_rate: 16000
+    channel: left
 
 media_player:
   - platform: speaker
-    name: none
+    name: None
     id: external_media_player
+    # HW pack must provide "speaker: box_speaker"
     announcement_pipeline:
-      speaker: announcement_resampling_input
+      speaker: box_speaker
       format: WAV
+      sample_rate: 16000
       num_channels: 1
-      sample_rate: 48000
-    media_pipeline:
-      speaker: media_resampling_input
-      format: WAV
-      num_channels: 1      
-      sample_rate: 48000
     buffer_size: 250000
-
+    files:
+      - id: timer_finished_sound
+        file: https://github.com/RealDeco/xiaozhi-esphome/raw/main/sounds/timer_finished.flac
+      - id: wake_word_triggered_sound
+        file: https://github.com/RealDeco/xiaozhi-esphome/raw/main/sounds/wake_word_triggered.flac
+      - id: ready_sound
+        file: ${startup_sound_file}
     on_announcement:
       - if:
           condition:
@@ -130,7 +110,6 @@ media_player:
             - script.execute: reset_screensaver
             - display.page.show: now_playing_page
             - component.update: main_display
-
     on_idle:
       - if:
           condition:
@@ -140,14 +119,6 @@ media_player:
             - script.execute: start_wake_word
             - script.execute: set_idle_or_mute_phase
             - script.execute: draw_display
-
-    files:
-      - id: timer_finished_sound
-        file: https://github.com/RealDeco/xiaozhi-esphome/raw/main/sounds/timer_finished.flac
-      - id: wake_word_triggered_sound
-        file: https://github.com/RealDeco/xiaozhi-esphome/raw/main/sounds/wake_word_triggered.flac
-      - id: ready_sound
-        file: ${startup_sound_file}
 
 # --- BACKLIGHT ----------------------------------------------------------------
 output:
