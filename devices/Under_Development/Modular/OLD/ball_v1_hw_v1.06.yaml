@@ -1,48 +1,15 @@
-# xingzhi cube 1.54 — hardware pack (ESP32-S3 + ST7789V 240x240)
-
-# --- EXTRA BUTTONS -------------------------------------------------------------
-binary_sensor:
-  - platform: gpio
-    pin: 
-      number: GPIO39
-      mode: INPUT_PULLUP
-      inverted: true
-    name: "Volume Down"
-    id: volume_down
-    filters:
-      - delayed_on: 10ms
-      - delayed_off: 10ms
-    on_press:
-      - media_player.volume_down: external_media_player
-    on_release:
-      - logger.log: "Volume Down released"
-
-  - platform: gpio
-    pin: 
-      number: GPIO40
-      mode: INPUT_PULLUP
-      inverted: true
-    name: "Volume Up"
-    id: volume_up
-    filters:
-      - delayed_on: 10ms
-      - delayed_off: 10ms
-    on_press:
-      - media_player.volume_up: external_media_player
-    on_release:
-      - logger.log: "Volume Up released"
+# Xiaozhi Ball v1 — hardware pack (ESP32-S3 + GC9A01A round 240x240) v1.06
 
 # --- BUSES / PERIPHERALS ------------------------------------------------------
 spi:
   - id: spi_bus
-    clk_pin: 9
-    mosi_pin: 10
-    # (no MISO line for display)
+    clk_pin: 14
+    mosi_pin: 17
 
 i2s_audio:
   - id: i2s_mic
-    i2s_lrclk_pin: GPIO4   # WS
-    i2s_bclk_pin:  GPIO5   # SCK
+    i2s_lrclk_pin: GPIO4
+    i2s_bclk_pin:  GPIO5
   - id: i2s_audio_bus
     i2s_lrclk_pin: GPIO16
     i2s_bclk_pin:  GPIO15
@@ -66,18 +33,17 @@ speaker:
     i2s_audio_id: i2s_audio_bus
     i2s_dout_pin: GPIO7
     dac_type: external
-    sample_rate: 16000
+    sample_rate: 48000
     channel: left
 
 media_player:
   - platform: speaker
     name: None
     id: external_media_player
-    # HW pack must provide "speaker: box_speaker"
     announcement_pipeline:
       speaker: box_speaker
       format: WAV
-      sample_rate: 16000
+      sample_rate: 48000
       num_channels: 1
     buffer_size: 250000
     files:
@@ -124,7 +90,7 @@ media_player:
 output:
   - platform: ledc
     id: backlight_output
-    pin: GPIO13
+    pin: GPIO3
     inverted: false
 
 light:
@@ -164,7 +130,7 @@ light:
 # --- BATTERY ADC --------------------------------------------------------------
 sensor:
   - platform: adc
-    pin: GPIO19
+    pin: GPIO1
     name: "Battery Voltage"
     id: battery_voltage
     attenuation: 12db
@@ -173,7 +139,7 @@ sensor:
     unit_of_measurement: "V"
     icon: mdi:battery-medium
     filters:
-      - multiply: 3.0
+      - multiply: 2.0
       - median:
           window_size: 7
           send_every: 7
@@ -189,10 +155,10 @@ sensor:
 display:
   - platform: ili9xxx
     id: main_display
-    model: ST7789V
+    model: GC9A01A
     spi_id: spi_bus
-    cs_pin: 14
-    dc_pin: 8
+    cs_pin: 13
+    dc_pin: 10
     reset_pin: 18
     invert_colors: true
     data_rate: 40MHz

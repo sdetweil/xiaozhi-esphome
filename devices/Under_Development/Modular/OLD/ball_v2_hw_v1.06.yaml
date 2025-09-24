@@ -1,4 +1,4 @@
-# Muma all versions hardware pack v1.07
+# Ball v2 hardware v1.06
 
 # --- BUSES / PERIPHERALS ------------------------------------------------------
 i2c:
@@ -288,7 +288,7 @@ sensor:
 display:
   - platform: ili9xxx
     id: main_display
-    model: ST7789V
+    model: GC9A01A
     invert_colors: true
     data_rate: 20MHz
     cs_pin: GPIO5

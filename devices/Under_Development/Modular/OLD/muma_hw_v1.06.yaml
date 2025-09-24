@@ -1,4 +1,4 @@
-# Muma all versions hardware pack v1.07
+# Muma all versions hardware pack v1.06
 
 # --- BUSES / PERIPHERALS ------------------------------------------------------
 i2c:
@@ -48,9 +48,10 @@ speaker:
     i2s_dout_pin: GPIO8
     dac_type: external
     audio_dac: es8311_dac
-    sample_rate: 48000
+    sample_rate: 16000
     channel: mono
 
+# Optional speaker power enable (Ball v2 has this)
 switch:
   - platform: gpio
     name: Speaker Enable
@@ -63,10 +64,11 @@ media_player:
   - platform: speaker
     name: None
     id: external_media_player
+    # HW pack must provide "speaker: box_speaker"
     announcement_pipeline:
       speaker: box_speaker
       format: WAV
-      sample_rate: 48000
+      sample_rate: 16000
       num_channels: 1
     buffer_size: 250000
     files:

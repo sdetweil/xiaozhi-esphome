@@ -2,17 +2,20 @@ substitutions:
   name: esphome-web-e9f624
   friendly_name: Xiaozhi Taichi Pi v1
 
-## Modular version Main v1.04
+## Modular version Main v1.07
 
 ## SETTINGS ######################################################################################################################################
 
+  display_model: "JC3636W518"
+  pdm_mic_type: "false"
+  rotate_display: "180"
+
   imagewidth:  "360"
   imageheight: "360"
-  rotate_display: "180"
 
   startup_sound: "Home_Connected" # (options are: available, Home_Connected, Home_Connected_Male, Computer_Ready)
   clock_background_image: "clock" # (options are: clock, hacker, ha-girl, mission, starrysky)
-  imagemodel: "ha-girl" # options are:
+  imagemodel: "Gwen" # options are:
 
 # Alita, Alfred, Astrobot, Buzz, Casita, Cybergirl, Dory, EVE, Eyes, Eyes2, GLaDOS, Girl1, Guy1, Guy2, Gwen, HA-character, ha-girl, Hacker, Harley,
 # Jarvis, Luffy, Mario, Max, Prime, Robochibi, Robocop, Robot, Robotgirl, Shaun
